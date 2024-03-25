@@ -1,0 +1,20 @@
+[package]
+name = "ws-server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7.4", features = ["ws"]}
+axum-extra = { version = "0.9.2", features = ["typed-header"] }
+futures = "0.3"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+headers = "0.4"
+ractor = { version = "0.9.7", default-features = false, features = ["tokio_runtime"] }
+tokio = { version = "1.0", features = ["full"] }
+tokio-tungstenite = "0.21"
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5.0", features = ["fs", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
