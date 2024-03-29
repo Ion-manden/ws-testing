@@ -12,6 +12,7 @@ futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 headers = "0.4"
 ractor = { version = "0.9.7", default-features = false, features = ["tokio_runtime"] }
+rand = "0.8.5"
 tokio = { version = "1.0", features = ["full"] }
 tokio-tungstenite = "0.21"
 tower = { version = "0.4", features = ["util"] }

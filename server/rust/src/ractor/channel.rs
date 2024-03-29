@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
-use crate::connection;
 use ractor::{Actor, ActorId, ActorProcessingErr, ActorRef};
+use super::balancer;
 
 pub struct Channel;
 
 /// This is the types of message [PingPong] supports
 #[derive(Debug, Clone)]
 pub enum Message {
-    Join(ActorRef<connection::Message>),
-    Leave(ActorRef<connection::Message>),
+    Join(ActorRef<balancer::Message>),
+    Leave(ActorRef<balancer::Message>),
     Message(String),
 }
 
 pub struct ChannelState {
-    attendies: HashMap<ActorId, ActorRef<connection::Message>>,
+    balancers: HashMap<ActorId, ActorRef<balancer::Message>>,
 }
 
 // the implementation of our actor's "logic"
@@ -36,7 +36,7 @@ impl Actor for Channel {
     ) -> Result<Self::State, ActorProcessingErr> {
         // create the initial state
         Ok(ChannelState {
-            attendies: HashMap::new(),
+            balancers: HashMap::new(),
         })
     }
 
@@ -48,20 +48,20 @@ impl Actor for Channel {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             Message::Join(conn) => {
-                state.attendies.insert(conn.get_id(), conn);
+                state.balancers.insert(conn.get_id(), conn);
             }
             Message::Leave(conn) => {
-                state.attendies.remove(&conn.get_id());
+                state.balancers.remove(&conn.get_id());
             }
             Message::Message(msg) => {
-                for (id, conn) in state.attendies.clone() {
-                    match conn.send_message(connection::Message::Out(msg.clone())) {
+                for (id, conn) in state.balancers.clone() {
+                    match conn.send_message(balancer::Message::Out(msg.clone())) {
                         Ok(_) => (),
                         Err(err) => match err {
                             ractor::MessagingErr::SendErr(_)
                             | ractor::MessagingErr::ChannelClosed => {
                                 println!("Channel Closed");
-                                state.attendies.remove(&id);
+                                state.balancers.remove(&id);
                             }
                             ractor::MessagingErr::InvalidActorType => {
                                 println!("Invalid actor type")

@@ -3,7 +3,7 @@ use futures::SinkExt;
 use futures_util::stream::SplitSink;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
-use crate::channel;
+use super::balancer;
 
 pub struct Connection;
 
@@ -17,7 +17,7 @@ pub enum Message {
 
 pub struct ConnectionState {
     pub ws: SplitSink<WebSocket, ws::Message>,
-    pub channel_actor: ActorRef<channel::Message>,
+    pub balancer_actor: ActorRef<balancer::Message>,
 }
 
 // the implementation of our actor's "logic"
@@ -38,8 +38,8 @@ impl Actor for Connection {
         state: ConnectionState,
     ) -> Result<Self::State, ActorProcessingErr> {
         state
-            .channel_actor
-            .send_message(channel::Message::Join(myself))
+            .balancer_actor
+            .send_message(balancer::Message::Join(balancer::DownsteamActor::Connection(myself)))
             .unwrap();
 
         Ok(state)
@@ -55,8 +55,8 @@ impl Actor for Connection {
         match message {
             Message::In(msg) => {
                 state
-                    .channel_actor
-                    .send_message(channel::Message::Message(msg))
+                    .balancer_actor
+                    .send_message(balancer::Message::In(msg))
                     .unwrap();
             }
             Message::Out(msg) => {
@@ -64,8 +64,8 @@ impl Actor for Connection {
             }
             Message::Close => {
                 state
-                    .channel_actor
-                    .send_message(channel::Message::Leave(myself))
+                    .balancer_actor
+                    .send_message(balancer::Message::Leave(balancer::DownsteamActor::Connection(myself)))
                     .unwrap();
             }
         };
