@@ -27,13 +27,14 @@ var wg = sync.WaitGroup{}
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	chatterCount := 10
+	chatterCount := 10_000
 
+	resultChan := make(chan int, chatterCount)
 	wg.Add(chatterCount)
 	for i := 0; i < chatterCount; i++ {
 		id := i
 		go func() {
-			startChatter(id, chatterCount, ctx)
+			startChatter(id, chatterCount, resultChan, ctx)
 			wg.Done()
 		}()
 	}
@@ -41,7 +42,7 @@ func main() {
 	time.Sleep(time.Second)
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/global"}
-	log.Printf("connecting to %s", u.String())
+	// log.Printf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -55,13 +56,23 @@ func main() {
 		return
 	}
 
-	<-time.After(time.Second * 30)
+	<-time.After(time.Second * 5)
 
 	cancel()
 	wg.Wait()
+
+	close(resultChan)
+
+	total := 0
+
+	for result := range resultChan {
+		total = total + result
+	}
+
+	println("Total messages sendt:", total)
 }
 
-func startChatter(id int, workerCount int, ctx context.Context) {
+func startChatter(id int, workerCount int, resultChan chan int, ctx context.Context) {
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/global"}
 	log.Printf("connecting to %s", u.String())
 
@@ -86,9 +97,7 @@ func startChatter(id int, workerCount int, ctx context.Context) {
 				return
 			}
 
-			if latest < nr {
-				latest = nr
-			}
+			latest = nr
 
 			if nr%workerCount == id {
 				err = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprint(nr+1)))
@@ -101,6 +110,8 @@ func startChatter(id int, workerCount int, ctx context.Context) {
 	}()
 
 	<-ctx.Done()
-  c.Close()
+	c.Close()
 	log.Println("latest:", latest, "id:", id)
+
+	resultChan <- latest
 }
