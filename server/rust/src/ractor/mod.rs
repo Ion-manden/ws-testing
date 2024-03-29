@@ -42,8 +42,8 @@ pub async fn run() {
         .await
         .expect("Failed to start channel actor");
 
-    let layer_1_balancer_count = 10;
-    let layer_2_balancer_count = 10;
+    let layer_1_balancer_count = 5;
+    let layer_2_balancer_count = 50;
     let mut layer_2_balancer_actors: Vec<ActorRef<balancer::Message>> = Vec::new();
     for _ in 0..layer_1_balancer_count {
         let (layer_1_balancer_actor, _handle) = Actor::spawn(
