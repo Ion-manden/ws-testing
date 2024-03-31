@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
+	crand "crypto/rand"
 	"log"
 	"math/big"
+	"math/rand"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -31,27 +32,28 @@ func main() {
 	layer2balancerActorCount := 5
 
 	for i := 0; i < layer1balancerActorCount; i++ {
-		l1ba := startBalancer(ctx, ca.in)
+		l1ba := startBalancer(ctx, ca)
 		for j := 0; j < layer2balancerActorCount; j++ {
-			l2ba := startBalancer(ctx, l1ba.in)
+			l2ba := startBalancer(ctx, l1ba)
 
-      bas = append(bas, l2ba)
+			bas = append(bas, l2ba)
 		}
 	}
 
 	// Upgraded websocket request
 	app.Get("/global", websocket.New(func(c *websocket.Conn) {
+    ba := getRandomBalanceActor(bas)
 
-		handleConnection(c, ca)
+		handleConnection(c, ba)
 	}))
 
 	log.Fatal(app.Listen(":8888"))
 }
 
-func handleConnection(conn *websocket.Conn, ca *channelActor) {
+func handleConnection(conn *websocket.Conn, ca *balancerActor) {
 	out := make(chan string, 5)
 
-	nr, err := rand.Int(rand.Reader, big.NewInt(50_000_000))
+	nr, err := crand.Int(crand.Reader, big.NewInt(50_000_000))
 	if err != nil {
 		log.Fatal("Rand err:", err)
 	}
@@ -83,4 +85,12 @@ func handleConnection(conn *websocket.Conn, ca *channelActor) {
 		}
 	}
 	ca.leave(id)
+}
+
+func getRandomBalanceActor(bas []*balancerActor) *balancerActor {
+	// Generate a random index within the range of the slice
+	i := rand.Intn(len(bas))
+
+	// Return the random item from the slice
+	return bas[i]
 }

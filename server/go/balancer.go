@@ -2,27 +2,39 @@ package main
 
 import (
 	"context"
+	crand "crypto/rand"
+	"log"
+	"math/big"
 
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type balancerActor struct {
+	id        int64
 	attendies *xsync.MapOf[int64, *chan string]
 	in        chan string
 	out       chan string
-	channel   *channelActor
+	upstream  channelActorInterface
 }
 
-func startBalancer(ctx context.Context, channel chan string) *balancerActor {
+func startBalancer(ctx context.Context, upstream channelActorInterface) *balancerActor {
 	in := make(chan string)
 	out := make(chan string)
 
+	nr, err := crand.Int(crand.Reader, big.NewInt(50_000_000))
+	if err != nil {
+		log.Fatal("Rand err:", err)
+	}
+
 	actor := balancerActor{
+		id:        nr.Int64(),
 		attendies: xsync.NewMapOf[int64, *chan string](),
 		in:        in,
 		out:       out,
+		upstream:  upstream,
 	}
 
+	upstream.join(actor.id, &out)
 
 	go func() {
 		for {
@@ -42,7 +54,7 @@ func startBalancer(ctx context.Context, channel chan string) *balancerActor {
 		for {
 			select {
 			case msg := <-in:
-				channel <- msg
+				upstream.sendMessage(msg)
 			case <-ctx.Done():
 				break
 			}

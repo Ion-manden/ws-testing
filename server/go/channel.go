@@ -6,6 +6,11 @@ import (
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
+type channelActorInterface interface {
+	join(id int64, out *chan string)
+	leave(id int64)
+	sendMessage(msg string)
+}
 type channelActor struct {
 	attendies *xsync.MapOf[int64, *chan string]
 	in        chan string
@@ -15,9 +20,9 @@ func startChannelActor(ctx context.Context) *channelActor {
 	in := make(chan string)
 
 	actor := channelActor{
-    attendies: xsync.NewMapOf[int64, *chan string](),
-    in: in,
-  }
+		attendies: xsync.NewMapOf[int64, *chan string](),
+		in:        in,
+	}
 
 	go func() {
 		for {
@@ -25,7 +30,7 @@ func startChannelActor(ctx context.Context) *channelActor {
 			case msg := <-in:
 				actor.attendies.Range(func(_ int64, attendie *chan string) bool {
 					*attendie <- msg
-          return true
+					return true
 				})
 			case <-ctx.Done():
 				break
